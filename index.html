@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <title>JARVIS - Assistente Total</title>
+    <link rel="manifest" href="manifest.json">
     <style>
         * {
             box-sizing: border-box;
@@ -243,7 +244,7 @@
             font-weight: bold;
         }
 
-        /* Menu lateral (temas, backup, etc) */
+        /* Menu lateral */
         .sidebar {
             position: fixed;
             top: 0;
@@ -301,13 +302,12 @@
             font-size: 0.7rem;
         }
 
-        /* Responsividade */
         @media (max-width: 600px) {
             .message { max-width: 95%; }
             .quick-btn { padding: 6px 10px; font-size: 0.7rem; }
         }
     </style>
-    <!-- Bibliotecas externas -->
+    <!-- Bibliotecas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -388,8 +388,8 @@
         // ==================== CONFIGURAÇÕES ====================
         let API_KEY = localStorage.getItem('gemini_api_key');
         let speechEnabled = localStorage.getItem('jarvis_speech') !== 'false';
-        let conversationHistory = []; // para contexto da IA
-        let pdfCache = null; // texto do PDF carregado
+        let conversationHistory = [];
+        let pdfCache = null;
         let recognition = null;
 
         // Banco de dados offline
@@ -407,7 +407,6 @@
         } catch(e) {}
         function saveDB() { localStorage.setItem('jarvis_db', JSON.stringify(db)); }
 
-        // Atualizar status da fala
         function updateSpeechUI() {
             toggleSpeechBtn.innerHTML = speechEnabled ? "🔊 Fala ativa" : "🔇 Fala desativada";
         }
@@ -419,7 +418,6 @@
             addSystemMessage(speechEnabled ? "🔊 Voz ativada." : "🔇 Voz desativada.");
         };
 
-        // ==================== FUNÇÕES DE MENSAGEM ====================
         function addMessage(role, text, isHtml = false) {
             const div = document.createElement('div');
             div.className = `message ${role === 'user' ? 'user' : ''}`;
@@ -434,9 +432,7 @@
             else conversationHistory.push({ role: "assistant", content: text });
             if (conversationHistory.length > 30) conversationHistory.shift();
         }
-        function addSystemMessage(text) {
-            addMessage('jarvis', text);
-        }
+        function addSystemMessage(text) { addMessage('jarvis', text); }
         function speak(text) {
             if (speechEnabled && 'speechSynthesis' in window) {
                 const utterance = new SpeechSynthesisUtterance(text.replace(/<[^>]*>/g, ''));
@@ -446,16 +442,13 @@
             }
         }
 
-        // ==================== COMANDOS OFFLINE (mais de 100 na prática) ====================
+        // ==================== COMANDOS OFFLINE ====================
         function processOfflineCommand(cmd) {
             const c = cmd.toLowerCase().trim();
-            // Horas/data
             if (c === 'que horas são') return new Date().toLocaleTimeString();
             if (c === 'que dia é hoje') return new Date().toLocaleDateString();
-            // Piadas
             const jokes = ["Por que o programador foi ao mercado? Por bytes!", "O que o zero disse ao oito? Bonito cinto!", "Qual o cúmulo do preguiçoso? Ser enterrado numa montanha de documentos.", "Jarvis: 'Eu não sou burro, só tenho preguiça de processar sua pergunta estúpida.'"];
             if (c === 'conte uma piada') return jokes[Math.floor(Math.random() * jokes.length)];
-            // Diário
             if (c.startsWith('registrar diário ')) {
                 let txt = cmd.substring(16).trim();
                 if (!txt) return "Escreva algo.";
@@ -464,7 +457,6 @@
                 return "📓 Registrado no diário.";
             }
             if (c === 'ler diário') return db.diario.length ? "📖 Diário:\n" + db.diario.join("\n") : "Diário vazio.";
-            // Gastos
             let gastoMatch = cmd.match(/adicionar gasto (.+?)\s+(\d+(?:\.\d+)?)/i);
             if (gastoMatch) {
                 db.gastos.push({ cat: gastoMatch[1], val: parseFloat(gastoMatch[2]), date: new Date() });
@@ -478,7 +470,6 @@
                 let res = `💰 Total: R$ ${total.toFixed(2)}\nPor categoria:\n`+Object.entries(cats).map(([k,v])=>`  ${k}: R$ ${v.toFixed(2)}`).join("\n");
                 return res;
             }
-            // Flashcards
             if (c === 'flashcard') {
                 let card = db.flashcards[Math.floor(Math.random()*db.flashcards.length)];
                 return `📇 ${card.q} – (responda "resposta: ${card.q}")`;
@@ -497,7 +488,6 @@
                 }
                 return "Formato: criar flashcard pergunta = resposta";
             }
-            // Senhas
             let passMatch = cmd.match(/salvar senha (.+?)\s+(.+?)\s+(.+)/i);
             if (passMatch) {
                 db.senhas.push({site: passMatch[1], user: passMatch[2], pass: passMatch[3]});
@@ -508,7 +498,6 @@
                 if (!db.senhas.length) return "Nenhuma senha salva.";
                 return "🔐 Senhas:\n"+db.senhas.map((s,i)=>`${i+1}. ${s.site} - ${s.user}`).join("\n");
             }
-            // Eventos
             let eventMatch = cmd.match(/adicionar evento (\d{1,2}\/\d{1,2}\/\d{4})\s+(.+)/i);
             if (eventMatch) {
                 db.eventos.push({date: eventMatch[1], desc: eventMatch[2]});
@@ -525,7 +514,6 @@
                 let evs = db.eventos.filter(e=>e.date===amanha);
                 return evs.length ? "📅 Amanhã:\n"+evs.map(e=>`• ${e.desc}`).join("\n") : "Nenhum evento amanhã.";
             }
-            // Matemática
             if (c.startsWith('tabuada do ')) {
                 let n = parseInt(c.replace('tabuada do','').trim());
                 if (!isNaN(n)) return Array.from({length:10},(_,i)=>`${n} x ${i+1} = ${n*(i+1)}`).join("\n");
@@ -537,7 +525,6 @@
                 let classif = imc<18.5?"Abaixo":imc<25?"Normal":imc<30?"Sobrepeso":imc<35?"Obesidade I":imc<40?"Obesidade II":"Obesidade III";
                 return `IMC = ${imc.toFixed(2)} - ${classif}`;
             }
-            // Calculadora (expressões)
             try {
                 let mathExpr = cmd.match(/[\d\s\+\-\*\/\(\)\.\,\^\%]+/);
                 if (mathExpr && !/[a-zA-Z]/.test(mathExpr[0])) {
@@ -546,35 +533,18 @@
                     return `🧮 Resultado: ${res}`;
                 }
             } catch(e) {}
-            // Sinônimos simples (dicionário embutido)
             const sinonimos = { "bom": "ótimo, excelente", "ruim": "péssimo, horrível", "rápido": "veloz, ágil", "grande": "enorme, imenso" };
             if (c.startsWith('sinônimo de ')) {
                 let palavra = c.substring(12).trim();
                 return sinonimos[palavra] ? `Sinônimos de ${palavra}: ${sinonimos[palavra]}` : "Desconhecido. Use IA para mais.";
             }
-            // Geografia básica
             const capitais = { "brasil": "Brasília", "frança": "Paris", "japão": "Tóquio", "eua": "Washington D.C." };
             if (c.startsWith('capital de ')) {
                 let pais = c.substring(11).trim();
                 return capitais[pais] ? `Capital de ${pais}: ${capitais[pais]}` : "Não sei. Pergunte à IA.";
             }
-            // Ajuda
             if (c === 'ajuda' || c === 'comandos') {
-                return `📚 COMANDOS OFFLINE:
-- que horas são / que dia é hoje
-- conte uma piada
-- registrar diário [texto] / ler diário
-- adicionar gasto [categoria] [valor] / resumo gastos
-- flashcard / criar flashcard pergunta = resposta / resposta: [pergunta]
-- salvar senha [site] [user] [senha] / mostrar senhas
-- adicionar evento dd/mm/aaaa descrição / eventos hoje / eventos amanhã
-- tabuada do [n] / imc peso [kg] altura [m]
-- calcular [expressão] (ex: 2+2*3)
-- sinônimo de [palavra] / capital de [país]
-
-🌐 COMANDOS ONLINE (com IA):
-- Faça perguntas normais, análise de PDF/imagem, clima, notícias.
-- Envie arquivos pelo botão 📎.`;
+                return `📚 COMANDOS OFFLINE:\n- que horas são / que dia é hoje\n- conte uma piada\n- registrar diário [texto] / ler diário\n- adicionar gasto [cat] [valor] / resumo gastos\n- flashcard / criar flashcard pergunta = resposta / resposta: [pergunta]\n- salvar senha [site] [user] [senha] / mostrar senhas\n- adicionar evento dd/mm/aaaa descrição / eventos hoje / eventos amanhã\n- tabuada do [n] / imc peso [kg] altura [m]\n- calcular [expressão]\n- sinônimo de [palavra] / capital de [país]\n\n🌐 ONLINE: faça perguntas, análise de PDF/imagem, clima, notícias.`;
             }
             return null;
         }
@@ -600,7 +570,6 @@
             } catch(e) { return `Erro conexão: ${e.message}`; }
         }
 
-        // ==================== PROCESSAMENTO DE ENVIO ====================
         async function processUserInput(text, imageBase64 = null) {
             addMessage('user', text);
             typingDiv.innerText = 'JARVIS pensando...';
@@ -611,7 +580,6 @@
                 speak(resposta);
                 return;
             }
-            // Se não offline, usa IA
             if (!API_KEY) {
                 typingDiv.innerText = '';
                 addMessage('jarvis', "❌ Sem chave API. Recarregue e cole a chave do Google Gemini.");
@@ -625,7 +593,6 @@
             speak(iaRes);
         }
 
-        // ==================== UPLOAD DE ARQUIVOS ====================
         async function uploadFile() {
             const input = document.createElement('input');
             input.type = 'file';
@@ -666,7 +633,7 @@
             input.click();
         }
 
-        // ==================== VOZ ====================
+        // Voz
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
@@ -678,13 +645,12 @@
                 userInput.value = fala;
                 processUserInput(fala);
             };
-            recognition.onerror = () => {};
             voiceBtn.onclick = () => recognition.start();
         } else {
             voiceBtn.style.display = 'none';
         }
 
-        // ==================== BACKUP E DADOS ====================
+        // Backup
         function exportBackup() {
             const dataStr = JSON.stringify({ apiKey: API_KEY, db, config: { speechEnabled } });
             const blob = new Blob([dataStr], {type: 'application/json'});
@@ -714,21 +680,16 @@
             input.click();
         }
         function clearAllData() {
-            if (confirm("⚠️ Apagar TODOS os dados (diário, gastos, flashcards, senhas, eventos, chave API)? Isso não pode ser desfeito.")) {
+            if (confirm("⚠️ Apagar TODOS os dados? Isso não pode ser desfeito.")) {
                 localStorage.clear();
                 location.reload();
             }
         }
 
-        // ==================== MENU LATERAL E TEMAS ====================
+        // Menu lateral e temas
         function toggleSidebar(show) {
-            if (show) {
-                sidebar.classList.add('open');
-                overlay.classList.add('active');
-            } else {
-                sidebar.classList.remove('open');
-                overlay.classList.remove('active');
-            }
+            if (show) { sidebar.classList.add('open'); overlay.classList.add('active'); }
+            else { sidebar.classList.remove('open'); overlay.classList.remove('active'); }
         }
         menuBtn.onclick = () => toggleSidebar(true);
         closeSidebar.onclick = () => toggleSidebar(false);
@@ -768,7 +729,7 @@
         document.getElementById('importBackupBtn').onclick = importBackup;
         document.getElementById('clearDataBtn').onclick = clearAllData;
 
-        // Verificar API key
+        // API Key
         if (!API_KEY) {
             const modal = document.createElement('div');
             modal.className = 'modal';
@@ -798,8 +759,15 @@
             statusSpan.innerText = '🔵 IA ativa';
         }
 
-        // Mensagem de boas-vindas
-        addSystemMessage("✨ JARVIS pronto! Teste comandos offline ou fale comigo. Use o microfone 🎤, anexe PDF/imagem 📎.");
+        addSystemMessage("✨ JARVIS pronto! Teste comandos offline ou fale comigo.");
+    </script>
+    <script>
+        // Registro do Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => console.log('Service Worker registrado', reg))
+                .catch(err => console.error('Falha ao registrar SW', err));
+        }
     </script>
 </body>
 </html>
