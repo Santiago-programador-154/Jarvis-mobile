@@ -1,0 +1,17 @@
+{
+  "name": "JARVIS Assistente",
+  "short_name": "JARVIS",
+  "description": "Assistente pessoal com IA, voz, PDF, finanças e mais de 100 comandos",
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#00f0ff",
+  "background_color": "#0a0a0f",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
