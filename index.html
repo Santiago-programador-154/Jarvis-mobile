@@ -13,7 +13,7 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* Temas */
+        /* Temas (mesmo código anterior, omitido para brevidade) */
         :root {
             --bg-primary: #0a0a0f;
             --bg-secondary: #14141c;
@@ -39,12 +39,8 @@
             --border: #d0d0da;
             --shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
-        body.blue {
-            --accent: #1e90ff;
-        }
-        body.green {
-            --accent: #32cd32;
-        }
+        body.blue { --accent: #1e90ff; }
+        body.green { --accent: #32cd32; }
         body {
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: var(--bg-primary);
@@ -177,7 +173,7 @@
             gap: 6px;
         }
 
-        /* Botões rápidos (rolagem horizontal) */
+        /* Botões rápidos */
         .quick-buttons {
             background: var(--bg-primary);
             padding: 8px 12px;
@@ -206,7 +202,7 @@
             padding: 4px 16px;
         }
 
-        /* Modal para API key */
+        /* Modal */
         .modal {
             position: fixed;
             top: 0; left: 0;
@@ -301,13 +297,11 @@
             border-radius: 20px;
             font-size: 0.7rem;
         }
-
         @media (max-width: 600px) {
             .message { max-width: 95%; }
             .quick-btn { padding: 6px 10px; font-size: 0.7rem; }
         }
     </style>
-    <!-- Bibliotecas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -549,25 +543,48 @@
             return null;
         }
 
-        // ==================== IA GEMINI ====================
+        // ==================== IA GEMINI CORRIGIDA ====================
         async function callGemini(prompt, imageBase64 = null) {
             if (!API_KEY) return "❌ API key não configurada. Recarregue e cole a chave.";
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+            // Usar API v1 (estável) com modelo correto
+            const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+            
             let parts = [{ text: prompt }];
             if (imageBase64) {
                 parts.push({ inlineData: { mimeType: "image/jpeg", data: imageBase64.split(',')[1] } });
             }
+            
             const payload = {
                 contents: [{ role: "user", parts }],
-                systemInstruction: { role: "system", parts: [{ text: "Você é JARVIS, assistente sarcástico, ranzinza, mas útil. Responda em português, frases curtas (máx 2 frases). Use humor ácido e xingamentos leves (porra, caralho) só quando pertinente. Seja direto." }] },
-                generationConfig: { temperature: 0.8, maxOutputTokens: 2000 }
+                system_instruction: {
+                    parts: [{ text: "Você é JARVIS, assistente sarcástico, ranzinza, mas útil. Responda em português, frases curtas (máx 2 frases). Use humor ácido e xingamentos leves (porra, caralho) só quando pertinente. Seja direto." }]
+                },
+                generationConfig: {
+                    temperature: 0.8,
+                    maxOutputTokens: 2000
+                }
             };
+            
             try {
-                const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const resp = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
                 const data = await resp.json();
-                if (data.error) return `Erro: ${data.error.message}`;
-                return data.candidates[0].content.parts[0].text;
-            } catch(e) { return `Erro conexão: ${e.message}`; }
+                if (data.error) {
+                    console.error("Gemini error:", data.error);
+                    return `Erro: ${data.error.message}`;
+                }
+                if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
+                    return data.candidates[0].content.parts[0].text;
+                } else {
+                    return "Resposta inesperada da IA.";
+                }
+            } catch(e) {
+                console.error("Fetch error:", e);
+                return `Erro de conexão: ${e.message}`;
+            }
         }
 
         async function processUserInput(text, imageBase64 = null) {
@@ -762,11 +779,10 @@
         addSystemMessage("✨ JARVIS pronto! Teste comandos offline ou fale comigo.");
     </script>
     <script>
-        // Registro do Service Worker
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js')
-                .then(reg => console.log('Service Worker registrado', reg))
-                .catch(err => console.error('Falha ao registrar SW', err));
+                .then(reg => console.log('SW registrado', reg))
+                .catch(err => console.error('Falha SW', err));
         }
     </script>
 </body>
