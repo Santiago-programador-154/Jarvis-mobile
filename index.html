@@ -3,28 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>JARVIS - Assistente Total</title>
+    <title>JARVIS - Assistente Total (LLaMA)</title>
     <link rel="manifest" href="manifest.json">
     <style>
-        /* Mesmo CSS da versão anterior, copie do código anterior ou mantenha o seu */
-        /* (vou omitir para não alongar, mas você pode reutilizar o mesmo estilo) */
+        /* MESMO CSS DA VERSÃO ANTERIOR (compactado para economia) */
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         :root {
-            --bg-primary: #0a0a0f;
-            --bg-secondary: #14141c;
-            --bg-tertiary: #1e1e2a;
-            --text-primary: #f0f0f0;
-            --text-secondary: #a0a0b0;
-            --accent: #00f0ff;
-            --user-bubble: #2a2a3a;
-            --jarvis-bubble: #1a1a2a;
-            --border: #2a2a3a;
-            --shadow: 0 8px 20px rgba(0,0,0,0.4);
-            --radius: 12px;
+            --bg-primary: #0a0a0f; --bg-secondary: #14141c; --bg-tertiary: #1e1e2a;
+            --text-primary: #f0f0f0; --text-secondary: #a0a0b0;
+            --accent: #00f0ff; --user-bubble: #2a2a3a; --jarvis-bubble: #1a1a2a;
+            --border: #2a2a3a; --shadow: 0 8px 20px rgba(0,0,0,0.4); --radius: 12px;
         }
         body.light { --bg-primary: #f5f5f7; --bg-secondary: #ffffff; --bg-tertiary: #e9e9ef; --text-primary: #1a1a2e; --text-secondary: #4a4a5a; --user-bubble: #e0e0e8; --jarvis-bubble: #ffffff; --border: #d0d0da; --shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        body.blue { --accent: #1e90ff; }
-        body.green { --accent: #32cd32; }
+        body.blue { --accent: #1e90ff; } body.green { --accent: #32cd32; }
         body { font-family: system-ui, sans-serif; background: var(--bg-primary); color: var(--text-primary); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         .header { background: var(--bg-secondary); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); flex-shrink: 0; }
         .logo { display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 1.2rem; color: var(--accent); }
@@ -74,14 +65,15 @@
         <div class="sidebar-section"><h3>🎨 Temas</h3><div class="theme-buttons"><button class="theme-btn" data-theme="dark">🌙 Escuro</button><button class="theme-btn" data-theme="light">☀️ Claro</button><button class="theme-btn" data-theme="blue">💙 Azul</button><button class="theme-btn" data-theme="green">💚 Verde</button></div></div>
         <div class="sidebar-section"><h3>🔊 Voz</h3><button id="toggleSpeechBtn">🔇 Desativar fala</button></div>
         <div class="sidebar-section"><h3>💾 Dados</h3><button id="exportBackupBtn">📤 Backup completo</button><button id="importBackupBtn">📥 Restaurar backup</button><button id="clearDataBtn">🗑️ Limpar todos os dados</button></div>
-        <div class="sidebar-section"><h3>❓ Sobre</h3><p style="font-size:0.7rem;">JARVIS IA - Versão Definitiva<br>100+ comandos offline + Gemini</p></div>
+        <div class="sidebar-section"><h3>❓ Sobre</h3><p style="font-size:0.7rem;">JARVIS LLaMA - Via OpenRouter<br>100+ comandos offline + IA LLaMA</p></div>
     </div>
-    <div class="header"><button class="icon-btn" id="menuBtn">☰</button><div class="logo">🤖 JARVIS <span style="font-size:0.7rem;">IA</span></div><div class="status" id="statusMsg">🔑 Aguardando chave</div></div>
-    <div class="chat" id="chatBox"><div class="message"><div class="avatar">🤖</div><div class="bubble"><div class="sender">JARVIS</div><p>✅ Inicializado. Cole sua chave do Google Gemini para IA completa. Comandos offline já disponíveis: "que horas são", "ajuda", etc.</p></div></div></div>
+    <div class="header"><button class="icon-btn" id="menuBtn">☰</button><div class="logo">🤖 JARVIS <span style="font-size:0.7rem;">LLaMA</span></div><div class="status" id="statusMsg">🔑 Aguardando chave</div></div>
+    <div class="chat" id="chatBox"><div class="message"><div class="avatar">🤖</div><div class="bubble"><div class="sender">JARVIS</div><p>✅ Inicializado. Cole sua chave da OpenRouter (free em openrouter.ai). Comandos offline já disponíveis: "que horas são", "ajuda", etc.</p></div></div></div>
     <div class="quick-buttons" id="quickButtons"></div>
     <div class="input-area"><div class="input-wrapper"><input type="text" id="userInput" placeholder="Digite ou fale..." autocomplete="off"><button class="icon-btn" id="attachBtn" style="background:none;">📎</button><button class="icon-btn" id="voiceBtn" style="background:none;">🎤</button></div><button class="icon-btn" id="sendBtn" style="background:var(--accent); color:#000;">➤</button></div>
     <div class="typing" id="typingIndicator"></div>
     <script>
+        // ==================== ELEMENTOS ====================
         const chatBox = document.getElementById('chatBox');
         const userInput = document.getElementById('userInput');
         const sendBtn = document.getElementById('sendBtn');
@@ -95,13 +87,18 @@
         const closeSidebar = document.getElementById('closeSidebar');
         const toggleSpeechBtn = document.getElementById('toggleSpeechBtn');
 
-        let API_KEY = localStorage.getItem('gemini_api_key');
+        // ==================== CONFIGURAÇÕES ====================
+        let API_KEY = localStorage.getItem('openrouter_api_key');
         let speechEnabled = localStorage.getItem('jarvis_speech') !== 'false';
         let conversationHistory = [];
         let pdfCache = null;
         let recognition = null;
 
-        let db = { diario: [], gastos: [], flashcards: [{q: "Capital do Brasil?", r: "Brasília"}], senhas: [], eventos: [], tarefas: [] };
+        // Banco de dados offline
+        let db = {
+            diario: [], gastos: [], flashcards: [{q: "Capital do Brasil?", r: "Brasília"}],
+            senhas: [], eventos: [], tarefas: []
+        };
         try { const saved = localStorage.getItem('jarvis_db'); if (saved) db = JSON.parse(saved); } catch(e) {}
         function saveDB() { localStorage.setItem('jarvis_db', JSON.stringify(db)); }
 
@@ -122,6 +119,7 @@
         function addSystemMessage(text) { addMessage('jarvis', text); }
         function speak(text) { if (speechEnabled && 'speechSynthesis' in window) { const utterance = new SpeechSynthesisUtterance(text.replace(/<[^>]*>/g, '')); utterance.lang = 'pt-BR'; window.speechSynthesis.cancel(); window.speechSynthesis.speak(utterance); } }
 
+        // ==================== COMANDOS OFFLINE (mesmos da versão anterior) ====================
         function processOfflineCommand(cmd) {
             const c = cmd.toLowerCase().trim();
             if (c === 'que horas são') return new Date().toLocaleTimeString();
@@ -151,46 +149,74 @@
             if (c.startsWith('sinônimo de ')) { let palavra = c.substring(12).trim(); return sinonimos[palavra] ? `Sinônimos de ${palavra}: ${sinonimos[palavra]}` : "Desconhecido. Use IA para mais."; }
             const capitais = { "brasil": "Brasília", "frança": "Paris", "japão": "Tóquio", "eua": "Washington D.C." };
             if (c.startsWith('capital de ')) { let pais = c.substring(11).trim(); return capitais[pais] ? `Capital de ${pais}: ${capitais[pais]}` : "Não sei. Pergunte à IA."; }
-            if (c === 'ajuda' || c === 'comandos') { return "📚 COMANDOS OFFLINE:\n- que horas são / que dia é hoje\n- conte uma piada\n- registrar diário [texto] / ler diário\n- adicionar gasto [cat] [valor] / resumo gastos\n- flashcard / criar flashcard pergunta = resposta / resposta: [pergunta]\n- salvar senha [site] [user] [senha] / mostrar senhas\n- adicionar evento dd/mm/aaaa descrição / eventos hoje / eventos amanhã\n- tabuada do [n] / imc peso [kg] altura [m]\n- calcular [expressão]\n- sinônimo de [palavra] / capital de [país]\n\n🌐 ONLINE: faça perguntas, análise de PDF/imagem, clima, notícias."; }
+            if (c === 'ajuda' || c === 'comandos') { return "📚 COMANDOS OFFLINE:\n- que horas são / que dia é hoje\n- conte uma piada\n- registrar diário [texto] / ler diário\n- adicionar gasto [cat] [valor] / resumo gastos\n- flashcard / criar flashcard pergunta = resposta / resposta: [pergunta]\n- salvar senha [site] [user] [senha] / mostrar senhas\n- adicionar evento dd/mm/aaaa descrição / eventos hoje / eventos amanhã\n- tabuada do [n] / imc peso [kg] altura [m]\n- calcular [expressão]\n- sinônimo de [palavra] / capital de [país]\n\n🌐 ONLINE (LLaMA): faça perguntas, análise de PDF/imagem, etc."; }
             return null;
         }
 
-        // FUNÇÃO CORRIGIDA DO GEMINI (sem system_instruction)
-        async function callGemini(prompt, imageBase64 = null) {
-            if (!API_KEY) return "❌ API key não configurada. Recarregue e cole a chave.";
-            const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
-            let parts = [{ text: prompt }];
+        // ==================== OPENROUTER (LLaMA) ====================
+        async function callOpenRouter(prompt, imageBase64 = null) {
+            if (!API_KEY) return "❌ API key não configurada. Obtenha uma chave grátis em openrouter.ai.";
+            const url = "https://openrouter.ai/api/v1/chat/completions";
+            // Se houver imagem, avisamos que não suportamos (poderíamos usar modelo multimodal, mas vamos simplificar)
             if (imageBase64) {
-                parts.push({ inlineData: { mimeType: "image/jpeg", data: imageBase64.split(',')[1] } });
+                return "⚠️ O modelo LLaMA não suporta imagens. Use o comando offline ou envie PDF (apenas texto).";
             }
-            // Instrução do sistema inserida como uma mensagem de usuário no início
-            const systemMessage = "Você é JARVIS, assistente sarcástico, ranzinza, mas útil. Responda em português, frases curtas (máx 2 frases). Use humor ácido e xingamentos leves (porra, caralho) só quando pertinente. Seja direto.";
+            const messages = [
+                { role: "system", content: "Você é JARVIS, assistente sarcástico, ranzinza, mas útil. Responda em português, frases curtas (máx 2 frases). Use humor ácido e xingamentos leves (porra, caralho) só quando pertinente. Seja direto." },
+                ...conversationHistory.slice(-10).map(msg => ({ role: msg.role, content: msg.content })),
+                { role: "user", content: prompt }
+            ];
             const payload = {
-                contents: [
-                    { role: "user", parts: [{ text: systemMessage + " Lembre-se disso sempre." }] },
-                    { role: "user", parts: parts }
-                ],
-                generationConfig: { temperature: 0.8, maxOutputTokens: 2000 }
+                model: "meta-llama/llama-3.2-3b-instruct:free",
+                messages: messages,
+                max_tokens: 1000,
+                temperature: 0.8
             };
             try {
-                const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const resp = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'HTTP-Referer': 'https://jarvis.app',
+                        'X-Title': 'JARVIS Assistant'
+                    },
+                    body: JSON.stringify(payload)
+                });
                 const data = await resp.json();
-                if (data.error) { console.error("Gemini error:", data.error); return `Erro: ${data.error.message}`; }
-                if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
-                    return data.candidates[0].content.parts[0].text;
-                } else { return "Resposta inesperada da IA."; }
-            } catch(e) { console.error("Fetch error:", e); return `Erro de conexão: ${e.message}`; }
+                if (data.error) {
+                    console.error("OpenRouter error:", data.error);
+                    return `Erro: ${data.error.message}`;
+                }
+                if (data.choices && data.choices[0] && data.choices[0].message) {
+                    return data.choices[0].message.content;
+                } else {
+                    return "Resposta inesperada da IA.";
+                }
+            } catch(e) {
+                console.error("Fetch error:", e);
+                return `Erro de conexão: ${e.message}`;
+            }
         }
 
         async function processUserInput(text, imageBase64 = null) {
             addMessage('user', text);
             typingDiv.innerText = 'JARVIS pensando...';
             let resposta = processOfflineCommand(text);
-            if (resposta) { typingDiv.innerText = ''; addMessage('jarvis', resposta); speak(resposta); return; }
-            if (!API_KEY) { typingDiv.innerText = ''; addMessage('jarvis', "❌ Sem chave API. Recarregue e cole a chave do Google Gemini."); return; }
+            if (resposta) {
+                typingDiv.innerText = '';
+                addMessage('jarvis', resposta);
+                speak(resposta);
+                return;
+            }
+            if (!API_KEY) {
+                typingDiv.innerText = '';
+                addMessage('jarvis', "❌ Sem chave API. Recarregue e cole a chave da OpenRouter.");
+                return;
+            }
             let promptFinal = text;
             if (pdfCache) promptFinal = `[Conteúdo do PDF]\n${pdfCache}\n\nPergunta: ${text}`;
-            const iaRes = await callGemini(promptFinal, imageBase64);
+            const iaRes = await callOpenRouter(promptFinal, imageBase64);
             typingDiv.innerText = '';
             addMessage('jarvis', iaRes);
             speak(iaRes);
@@ -206,12 +232,22 @@
                     for (let i=1; i<=pdf.numPages; i++) { const page = await pdf.getPage(i); const content = await page.getTextContent(); fullText += content.items.map(item=>item.str).join(' ') + '\n'; }
                     pdfCache = fullText; typingDiv.innerText = ''; addMessage('jarvis', `✅ PDF "${file.name}" carregado (${fullText.length} caracteres). Pergunte sobre ele.`);
                 } else if (file.type.startsWith('image/')) {
-                    addMessage('user', `🖼️ Enviou imagem: ${file.name}`); typingDiv.innerText = 'Analisando imagem...';
-                    const reader = new FileReader(); reader.onloadend = async () => { const base64 = reader.result; const resIA = await callGemini("Descreva esta imagem em detalhes e extraia todo o texto visível (OCR).", base64); typingDiv.innerText = ''; addMessage('jarvis', resIA); speak(resIA); }; reader.readAsDataURL(file);
+                    addMessage('user', `🖼️ Enviou imagem: ${file.name}`); typingDiv.innerText = 'Processando imagem... (OCR local)';
+                    // Usar Tesseract para OCR offline (mesmo sem IA)
+                    try {
+                        const { data: { text } } = await Tesseract.recognize(file, 'por');
+                        typingDiv.innerText = '';
+                        addMessage('jarvis', `📷 Texto extraído da imagem:\n${text || "Nenhum texto encontrado."}`);
+                        speak("Texto extraído da imagem.");
+                    } catch(err) {
+                        typingDiv.innerText = '';
+                        addMessage('jarvis', `❌ Erro no OCR: ${err.message}`);
+                    }
                 } else { addMessage('jarvis', "Formato não suportado. Use PDF ou imagem."); }
             }; input.click();
         }
 
+        // Voz
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition(); recognition.lang = 'pt-BR'; recognition.continuous = false; recognition.interimResults = false;
@@ -219,15 +255,18 @@
             voiceBtn.onclick = () => recognition.start();
         } else { voiceBtn.style.display = 'none'; }
 
+        // Backup
         function exportBackup() { const dataStr = JSON.stringify({ apiKey: API_KEY, db, config: { speechEnabled } }); const blob = new Blob([dataStr], {type: 'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'jarvis_backup.json'; a.click(); }
-        function importBackup() { const input = document.createElement('input'); input.type = 'file'; input.accept = 'application/json'; input.onchange = async (e) => { const file = e.target.files[0]; const text = await file.text(); try { const data = JSON.parse(text); if (data.db) db = data.db; if (data.apiKey) API_KEY = data.apiKey; if (data.config) speechEnabled = data.config.speechEnabled; saveDB(); localStorage.setItem('gemini_api_key', API_KEY); localStorage.setItem('jarvis_speech', speechEnabled); addSystemMessage("✅ Backup restaurado com sucesso."); } catch(err) { addSystemMessage("❌ Arquivo inválido."); } }; input.click(); }
+        function importBackup() { const input = document.createElement('input'); input.type = 'file'; input.accept = 'application/json'; input.onchange = async (e) => { const file = e.target.files[0]; const text = await file.text(); try { const data = JSON.parse(text); if (data.db) db = data.db; if (data.apiKey) API_KEY = data.apiKey; if (data.config) speechEnabled = data.config.speechEnabled; saveDB(); localStorage.setItem('openrouter_api_key', API_KEY); localStorage.setItem('jarvis_speech', speechEnabled); addSystemMessage("✅ Backup restaurado com sucesso."); } catch(err) { addSystemMessage("❌ Arquivo inválido."); } }; input.click(); }
         function clearAllData() { if (confirm("⚠️ Apagar TODOS os dados? Isso não pode ser desfeito.")) { localStorage.clear(); location.reload(); } }
 
+        // Menu lateral e temas
         function toggleSidebar(show) { if (show) { sidebar.classList.add('open'); overlay.classList.add('active'); } else { sidebar.classList.remove('open'); overlay.classList.remove('active'); } }
         menuBtn.onclick = () => toggleSidebar(true); closeSidebar.onclick = () => toggleSidebar(false); overlay.onclick = () => toggleSidebar(false);
         document.querySelectorAll('.theme-btn').forEach(btn => { btn.onclick = () => { const theme = btn.getAttribute('data-theme'); document.body.className = theme === 'dark' ? '' : theme; if (theme === 'dark') document.body.removeAttribute('class'); localStorage.setItem('jarvis_theme', theme); }; });
         const savedTheme = localStorage.getItem('jarvis_theme'); if (savedTheme && savedTheme !== 'dark') document.body.className = savedTheme;
 
+        // Botões rápidos
         const quickCmds = ["que horas são", "conte uma piada", "resumo gastos", "flashcard", "ajuda"];
         const quickContainer = document.getElementById('quickButtons');
         quickCmds.forEach(cmd => { const btn = document.createElement('button'); btn.textContent = cmd; btn.className = 'quick-btn'; btn.onclick = () => processUserInput(cmd); quickContainer.appendChild(btn); });
@@ -240,15 +279,16 @@
         document.getElementById('importBackupBtn').onclick = importBackup;
         document.getElementById('clearDataBtn').onclick = clearAllData;
 
+        // API Key - OpenRouter
         if (!API_KEY) {
             const modal = document.createElement('div'); modal.className = 'modal';
-            modal.innerHTML = `<div class="modal-card"><h3>🔑 Chave do Google Gemini</h3><p>Obtenha grátis em <a href="https://aistudio.google.com/" target="_blank" style="color:var(--accent)">Google AI Studio</a></p><input type="text" id="apiKeyInput" placeholder="Cole sua API key aqui" autocomplete="off"><div><button id="saveApiKey">Salvar</button><button id="cancelApiKey">Usar só offline</button></div></div>`;
+            modal.innerHTML = `<div class="modal-card"><h3>🔑 Chave da OpenRouter</h3><p>Obtenha grátis em <a href="https://openrouter.ai/" target="_blank" style="color:var(--accent)">openrouter.ai</a> (crie conta e gere uma key).</p><input type="text" id="apiKeyInput" placeholder="Cole sua API key aqui" autocomplete="off"><div><button id="saveApiKey">Salvar</button><button id="cancelApiKey">Usar só offline</button></div></div>`;
             document.body.appendChild(modal);
-            document.getElementById('saveApiKey').onclick = () => { const key = document.getElementById('apiKeyInput').value.trim(); if (key) { API_KEY = key; localStorage.setItem('gemini_api_key', key); statusSpan.innerText = '🔵 IA ativa'; modal.remove(); addSystemMessage("✅ Chave salva! Agora IA funcionando."); } else alert("Digite uma chave válida."); };
+            document.getElementById('saveApiKey').onclick = () => { const key = document.getElementById('apiKeyInput').value.trim(); if (key) { API_KEY = key; localStorage.setItem('openrouter_api_key', key); statusSpan.innerText = '🔵 IA ativa (LLaMA)'; modal.remove(); addSystemMessage("✅ Chave salva! Agora IA LLaMA funcionando."); } else alert("Digite uma chave válida."); };
             document.getElementById('cancelApiKey').onclick = () => { modal.remove(); statusSpan.innerText = '🟡 Offline'; addSystemMessage("Modo offline ativo. Para IA, recarregue e cole a chave."); };
-        } else { statusSpan.innerText = '🔵 IA ativa'; }
+        } else { statusSpan.innerText = '🔵 IA ativa (LLaMA)'; }
 
-        addSystemMessage("✨ JARVIS pronto! Teste comandos offline ou fale comigo.");
+        addSystemMessage("✨ JARVIS com LLaMA pronto! Teste comandos offline ou fale comigo. (Imagens só OCR, não análise por IA).");
 
         if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').then(reg => console.log('SW registrado', reg)).catch(err => console.error('Falha SW', err)); }
     </script>
