@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>JARVIS - Assistente com LLaMA (OpenRouter)</title>
+    <title>JARVIS - Assistente com IA (LLaMA)</title>
     <link rel="manifest" href="manifest.json">
     <style>
-        /* ESTILOS (mesmo da versão anterior - compactado) */
+        /* ESTILOS (mesmo da versão anterior, mantido) */
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         :root {
             --bg-primary: #0a0a0f; --bg-secondary: #14141c; --bg-tertiary: #1e1e2a;
@@ -65,7 +65,7 @@
         <div class="sidebar-section"><h3>🎨 Temas</h3><div class="theme-buttons"><button class="theme-btn" data-theme="dark">🌙 Escuro</button><button class="theme-btn" data-theme="light">☀️ Claro</button><button class="theme-btn" data-theme="blue">💙 Azul</button><button class="theme-btn" data-theme="green">💚 Verde</button></div></div>
         <div class="sidebar-section"><h3>🔊 Voz</h3><button id="toggleSpeechBtn">🔇 Desativar fala</button></div>
         <div class="sidebar-section"><h3>💾 Dados</h3><button id="exportBackupBtn">📤 Backup completo</button><button id="importBackupBtn">📥 Restaurar backup</button><button id="clearDataBtn">🗑️ Limpar todos os dados</button></div>
-        <div class="sidebar-section"><h3>❓ Sobre</h3><p style="font-size:0.7rem;">JARVIS LLaMA - OpenRouter<br>100+ comandos offline + IA (Phi-3)</p></div>
+        <div class="sidebar-section"><h3>❓ Sobre</h3><p style="font-size:0.7rem;">JARVIS LLaMA - OpenRouter<br>100+ comandos offline + IA</p></div>
     </div>
     <div class="header"><button class="icon-btn" id="menuBtn">☰</button><div class="logo">🤖 JARVIS <span style="font-size:0.7rem;">IA</span></div><div class="status" id="statusMsg">🔑 Aguardando chave</div></div>
     <div class="chat" id="chatBox"><div class="message"><div class="avatar">🤖</div><div class="bubble"><div class="sender">JARVIS</div><p>✅ Inicializado. Cole sua chave da OpenRouter (gratuita em openrouter.ai). Comandos offline funcionam mesmo sem chave.</p></div></div></div>
@@ -153,7 +153,7 @@
             return null;
         }
 
-        // ==================== OPENROUTER (modelo Phi-3, gratuito e estável) ====================
+        // ==================== OPENROUTER (LLaMA 3.2 3B gratuito) ====================
         async function callOpenRouter(prompt) {
             if (!API_KEY) return "❌ API key não configurada. Obtenha uma chave grátis em openrouter.ai.";
             const url = "https://openrouter.ai/api/v1/chat/completions";
@@ -162,8 +162,10 @@
                 ...conversationHistory.slice(-10).map(msg => ({ role: msg.role, content: msg.content })),
                 { role: "user", content: prompt }
             ];
+            // Modelo corrigido (válido e gratuito)
+            const model = "meta-llama/llama-3.2-3b-instruct:free";
             const payload = {
-                model: "microsoft/phi-3-mini-124k-instruct:free",  // modelo gratuito e confiável
+                model: model,
                 messages: messages,
                 max_tokens: 1000,
                 temperature: 0.8
@@ -182,8 +184,9 @@
                 const data = await resp.json();
                 if (data.error) {
                     console.error("OpenRouter error:", data.error);
-                    if (data.error.message && data.error.message.includes("Provider returned error")) {
-                        return "⚠️ O provedor de IA está ocupado. Tente novamente em alguns segundos ou use comandos offline.";
+                    // Se erro de modelo, tenta um fallback
+                    if (data.error.message && data.error.message.includes("model")) {
+                        return "⚠️ Modelo temporariamente indisponível. Tente novamente mais tarde ou use comandos offline.";
                     }
                     return `Erro: ${data.error.message}`;
                 }
@@ -253,12 +256,12 @@
             voiceBtn.onclick = () => recognition.start();
         } else { voiceBtn.style.display = 'none'; }
 
-        // ==================== BACKUP E DADOS ====================
+        // ==================== BACKUP ====================
         function exportBackup() { const dataStr = JSON.stringify({ apiKey: API_KEY, db, config: { speechEnabled } }); const blob = new Blob([dataStr], {type: 'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'jarvis_backup.json'; a.click(); }
         function importBackup() { const input = document.createElement('input'); input.type = 'file'; input.accept = 'application/json'; input.onchange = async (e) => { const file = e.target.files[0]; const text = await file.text(); try { const data = JSON.parse(text); if (data.db) db = data.db; if (data.apiKey) API_KEY = data.apiKey; if (data.config) speechEnabled = data.config.speechEnabled; saveDB(); localStorage.setItem('openrouter_api_key', API_KEY); localStorage.setItem('jarvis_speech', speechEnabled); addSystemMessage("✅ Backup restaurado com sucesso."); } catch(err) { addSystemMessage("❌ Arquivo inválido."); } }; input.click(); }
         function clearAllData() { if (confirm("⚠️ Apagar TODOS os dados? Isso não pode ser desfeito.")) { localStorage.clear(); location.reload(); } }
 
-        // ==================== MENU LATERAL E TEMAS ====================
+        // ==================== MENU ====================
         function toggleSidebar(show) { if (show) { sidebar.classList.add('open'); overlay.classList.add('active'); } else { sidebar.classList.remove('open'); overlay.classList.remove('active'); } }
         menuBtn.onclick = () => toggleSidebar(true); closeSidebar.onclick = () => toggleSidebar(false); overlay.onclick = () => toggleSidebar(false);
         document.querySelectorAll('.theme-btn').forEach(btn => { btn.onclick = () => { const theme = btn.getAttribute('data-theme'); document.body.className = theme === 'dark' ? '' : theme; if (theme === 'dark') document.body.removeAttribute('class'); localStorage.setItem('jarvis_theme', theme); }; });
@@ -270,7 +273,7 @@
         quickCmds.forEach(cmd => { const btn = document.createElement('button'); btn.textContent = cmd; btn.className = 'quick-btn'; btn.onclick = () => processUserInput(cmd); quickContainer.appendChild(btn); });
         const attachQuick = document.createElement('button'); attachQuick.textContent = "📎 Anexar"; attachQuick.className = 'quick-btn'; attachQuick.onclick = uploadFile; quickContainer.appendChild(attachQuick);
 
-        // ==================== EVENTOS ====================
+        // ==================== EVENTOS PRINCIPAIS ====================
         sendBtn.onclick = () => { if (userInput.value.trim()) processUserInput(userInput.value.trim()); userInput.value = ''; };
         userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendBtn.click(); });
         attachBtn.onclick = uploadFile;
@@ -278,14 +281,14 @@
         document.getElementById('importBackupBtn').onclick = importBackup;
         document.getElementById('clearDataBtn').onclick = clearAllData;
 
-        // ==================== SOLICITAR CHAVE API ====================
+        // ==================== API KEY MODAL ====================
         if (!API_KEY) {
             const modal = document.createElement('div'); modal.className = 'modal';
             modal.innerHTML = `<div class="modal-card"><h3>🔑 Chave da OpenRouter</h3><p>Obtenha grátis em <a href="https://openrouter.ai/" target="_blank" style="color:var(--accent)">openrouter.ai</a> (crie conta, vá em Keys, gere uma).</p><input type="text" id="apiKeyInput" placeholder="Cole sua API key aqui" autocomplete="off"><div><button id="saveApiKey">Salvar</button><button id="cancelApiKey">Usar só offline</button></div></div>`;
             document.body.appendChild(modal);
-            document.getElementById('saveApiKey').onclick = () => { const key = document.getElementById('apiKeyInput').value.trim(); if (key) { API_KEY = key; localStorage.setItem('openrouter_api_key', key); statusSpan.innerText = '🔵 IA ativa (Phi-3)'; modal.remove(); addSystemMessage("✅ Chave salva! Agora IA funcionando."); } else alert("Digite uma chave válida."); };
+            document.getElementById('saveApiKey').onclick = () => { const key = document.getElementById('apiKeyInput').value.trim(); if (key) { API_KEY = key; localStorage.setItem('openrouter_api_key', key); statusSpan.innerText = '🔵 IA ativa (LLaMA)'; modal.remove(); addSystemMessage("✅ Chave salva! Agora IA funcionando."); } else alert("Digite uma chave válida."); };
             document.getElementById('cancelApiKey').onclick = () => { modal.remove(); statusSpan.innerText = '🟡 Offline'; addSystemMessage("Modo offline ativo. Para IA, recarregue e cole a chave."); };
-        } else { statusSpan.innerText = '🔵 IA ativa (Phi-3)'; }
+        } else { statusSpan.innerText = '🔵 IA ativa (LLaMA)'; }
 
         addSystemMessage("✨ JARVIS pronto! Teste comandos offline ou fale comigo. Para IA, use chave da OpenRouter (grátis).");
 
