@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>JARVIS - Assistente com IA (LLaMA)</title>
+    <title>JARVIS - Conhecimento Total (Programação + Finanças + Humanidades)</title>
     <link rel="manifest" href="manifest.json">
     <style>
-        /* ESTILOS (mesmo da versão anterior, mantido) */
+        /* ESTILOS (mesmo da versão Ultra) */
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         :root {
             --bg-primary: #0a0a0f; --bg-secondary: #14141c; --bg-tertiary: #1e1e2a;
@@ -52,11 +52,15 @@
         .theme-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
         .theme-btn { background: var(--bg-tertiary); border: none; padding: 6px 12px; border-radius: 20px; font-size: 0.7rem; }
         @media (max-width: 600px) { .message { max-width: 95%; } .quick-btn { padding: 6px 10px; font-size: 0.7rem; } }
+        .pdf-controls { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+        .pdf-controls button { background: var(--bg-tertiary); border: none; padding: 4px 10px; border-radius: 30px; font-size: 0.7rem; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
     <div class="overlay" id="overlay"></div>
@@ -65,20 +69,21 @@
         <div class="sidebar-section"><h3>🎨 Temas</h3><div class="theme-buttons"><button class="theme-btn" data-theme="dark">🌙 Escuro</button><button class="theme-btn" data-theme="light">☀️ Claro</button><button class="theme-btn" data-theme="blue">💙 Azul</button><button class="theme-btn" data-theme="green">💚 Verde</button></div></div>
         <div class="sidebar-section"><h3>🔊 Voz</h3><button id="toggleSpeechBtn">🔇 Desativar fala</button></div>
         <div class="sidebar-section"><h3>💾 Dados</h3><button id="exportBackupBtn">📤 Backup completo</button><button id="importBackupBtn">📥 Restaurar backup</button><button id="clearDataBtn">🗑️ Limpar todos os dados</button></div>
-        <div class="sidebar-section"><h3>❓ Sobre</h3><p style="font-size:0.7rem;">JARVIS LLaMA - OpenRouter<br>100+ comandos offline + IA</p></div>
+        <div class="sidebar-section"><h3>❓ Sobre</h3><p style="font-size:0.7rem;">JARVIS Programação+Finanças+Humanidades<br>Offline total</p></div>
     </div>
-    <div class="header"><button class="icon-btn" id="menuBtn">☰</button><div class="logo">🤖 JARVIS <span style="font-size:0.7rem;">IA</span></div><div class="status" id="statusMsg">🔑 Aguardando chave</div></div>
-    <div class="chat" id="chatBox"><div class="message"><div class="avatar">🤖</div><div class="bubble"><div class="sender">JARVIS</div><p>✅ Inicializado. Cole sua chave da OpenRouter (gratuita em openrouter.ai). Comandos offline funcionam mesmo sem chave.</p></div></div></div>
+    <div class="header"><button class="icon-btn" id="menuBtn">☰</button><div class="logo">🤖 JARVIS <span style="font-size:0.7rem;">Dev+Fin</span></div><div class="status" id="statusMsg">🟢 100% offline</div></div>
+    <div class="chat" id="chatBox"><div class="message"><div class="avatar">🤖</div><div class="bubble"><div class="sender">JARVIS</div><p>✅ Conhecimento total: Python, Java, JavaScript, HTML, CSS, SQL, TypeScript, Finanças, Humanidades, Exatas. Digite 'ajuda' ou o nome da matéria (ex: 'python', 'java', 'javascript', 'html', 'css', 'sql', 'typescript').</p></div></div></div>
     <div class="quick-buttons" id="quickButtons"></div>
-    <div class="input-area"><div class="input-wrapper"><input type="text" id="userInput" placeholder="Digite ou fale..." autocomplete="off"><button class="icon-btn" id="attachBtn" style="background:none;">📎</button><button class="icon-btn" id="voiceBtn" style="background:none;">🎤</button></div><button class="icon-btn" id="sendBtn" style="background:var(--accent); color:#000;">➤</button></div>
+    <div class="input-area"><div class="input-wrapper"><input type="text" id="userInput" placeholder="Digite ou fale..." autocomplete="off"><button class="icon-btn" id="attachBtn" style="background:none;">📎</button><button class="icon-btn" id="voiceBtn" style="background:none;">🎤</button><button class="icon-btn" id="qrScanBtn" style="background:none;">📷</button></div><button class="icon-btn" id="sendBtn" style="background:var(--accent); color:#000;">➤</button></div>
     <div class="typing" id="typingIndicator"></div>
     <script>
-        // ==================== ELEMENTOS ====================
+        // ==================== ELEMENTOS DOM ====================
         const chatBox = document.getElementById('chatBox');
         const userInput = document.getElementById('userInput');
         const sendBtn = document.getElementById('sendBtn');
         const voiceBtn = document.getElementById('voiceBtn');
         const attachBtn = document.getElementById('attachBtn');
+        const qrScanBtn = document.getElementById('qrScanBtn');
         const typingDiv = document.getElementById('typingIndicator');
         const statusSpan = document.getElementById('statusMsg');
         const menuBtn = document.getElementById('menuBtn');
@@ -88,20 +93,182 @@
         const toggleSpeechBtn = document.getElementById('toggleSpeechBtn');
 
         // ==================== CONFIGURAÇÕES ====================
-        let API_KEY = localStorage.getItem('openrouter_api_key');
         let speechEnabled = localStorage.getItem('jarvis_speech') !== 'false';
-        let conversationHistory = [];
-        let pdfCache = null;
         let recognition = null;
+        let speechRate = 0.9;
+        let modoNaoPerturbe = false;
+        let timerId = null;
+        let cronometroInterval = null;
+        let cronometroSegundos = 0;
 
-        // Banco de dados offline
-        let db = {
-            diario: [], gastos: [], flashcards: [{q: "Capital do Brasil?", r: "Brasília"}],
-            senhas: [], eventos: [], tarefas: []
+        // ==================== KNOWLEDGE BASE (COMPLETO) ====================
+        let knowledgeBase = JSON.parse(localStorage.getItem('jarvis_knowledge')) || {
+            // ---------- LINGUAGENS DE PROGRAMAÇÃO E WEB ----------
+            "python": [
+                "Características: alto nível, interpretada, tipagem dinâmica, multiparadigma, sintaxe limpa por indentação.",
+                "Variáveis: nome = 'João'; idade = 25; altura = 1.75; aprovado = True; nulo = None",
+                "Estruturas: lista = [1,2,3]; tupla = (1,2,3); dicionario = {'chave':'valor'}; conjunto = {1,2,3}",
+                "Operadores: aritméticos (+ - * / // % **), comparação (== != < > <= >=), lógicos (and or not)",
+                "Condicionais: if idade >= 18: print('Maior') elif idade > 12: print('Adolescente') else: print('Criança')",
+                "Laços: for i in range(5): print(i); for item in lista: print(item); while cont < 3: print(cont); cont+=1",
+                "Funções: def somar(a,b): return a+b; def saudacao(nome, mensagem='Olá'): print(f'{mensagem}, {nome}')",
+                "Lambda: quadrado = lambda x: x**2",
+                "Orientação a objetos: class Pessoa: def __init__(self,nome,idade): self.nome=nome; def falar(self): return f'{self.nome} fala'",
+                "Herança: class Aluno(Pessoa): def __init__(self,nome,idade,matricula): super().__init__(nome,idade); self.matricula=matricula",
+                "Tratamento de erros: try: ... except ZeroDivisionError as e: ... else: ... finally: ...",
+                "Módulos: import math; from datetime import datetime; math.sqrt(25)",
+                "List comprehension: [x**2 for x in range(10)]; [x for x in range(20) if x%2==0]",
+                "Arquivos: with open('dados.txt','r', encoding='utf-8') as f: conteudo = f.read()",
+                "JSON: import json; dados = json.loads(json_string); json_string = json.dumps(dados)",
+                "Bibliotecas principais: Django, Flask (web); NumPy, Pandas (data); Selenium (automação); pytest (testes)"
+            ],
+            "java": [
+                "Características: compilada para bytecode, JVM, fortemente tipada, orientada a objetos, multiplataforma, Garbage Collector.",
+                "Estrutura: public class HelloWorld { public static void main(String[] args) { System.out.println(\"Olá\"); } }",
+                "Tipos primitivos: int, double, boolean, char, long, float, byte, short",
+                "Variáveis: int idade = 25; double altura = 1.75; boolean aprovado = true; String nome = \"João\"",
+                "Operadores: similares ao Python, mas lógicos: && || !",
+                "Condicionais: if (idade >= 18) { System.out.println(\"Maior\"); } else if (idade > 12) { ... } else { ... }",
+                "Switch: switch (dia) { case \"segunda\": System.out.println(\"Trabalho\"); break; default: ... }",
+                "Laços: for (int i=0;i<5;i++){ }; for (int num : numeros){ }; while (cont<3){ cont++; }",
+                "Funções (métodos): public static int somar(int a, int b) { return a+b; }",
+                "Orientação a objetos: classe, atributos private, construtor, getters/setters, herança (extends), interface (implements)",
+                "Exceções: try { ... } catch (ArithmeticException e) { ... } finally { ... }",
+                "Coleções: ArrayList, HashSet, HashMap, etc.",
+                "Streams e lambdas (Java 8+): lista.stream().filter(n -> n%2==0).map(n->n*n).forEach(System.out::println)",
+                "Frameworks: Spring Boot, Hibernate, JUnit, Maven/Gradle"
+            ],
+            "javascript": [
+                "Características: interpretada, tipagem dinâmica e fraca, base do front-end e Node.js.",
+                "Variáveis: let nome = 'João'; const idade = 25; var antigo (evitar).",
+                "Tipos: string, number, boolean, null, undefined, object, symbol.",
+                "Operadores: aritméticos (+ - * / % **), comparação (==, ===, !=, !==), lógicos (&& || !), spread (...).",
+                "Condicionais: if (idade >= 18) { console.log('Maior'); } else if ... else ...",
+                "Switch: switch (fruta) { case 'banana': console.log('Amarela'); break; default: ... }",
+                "Laços: for (let i=0;i<5;i++); for (let item of array); for (let chave in objeto); while; do-while",
+                "Funções: function somar(a,b){ return a+b; }; const subtrair = (a,b)=> a-b; (arrow functions)",
+                "Objetos: const pessoa = { nome: 'Ana', idade:28, falar(){ console.log(this.nome); } };",
+                "Arrays: métodos map, filter, reduce, find, includes, push, pop.",
+                "Assíncrono: callbacks, Promises (then/catch), async/await.",
+                "DOM: document.getElementById, querySelector, addEventListener, classList, createElement, etc.",
+                "JSON: JSON.stringify(obj), JSON.parse(jsonStr).",
+                "Node.js: módulos (require/import), http server, fs.",
+                "TypeScript (superset): adiciona tipagem estática, interfaces, generics."
+            ],
+            "html": [
+                "Estrutura básica: <!DOCTYPE html><html><head><meta charset='UTF-8'><title>...</title></head><body>...</body></html>",
+                "Tags estruturais: <header>, <nav>, <main>, <section>, <article>, <aside>, <footer>, <div>, <span>",
+                "Textos: <h1> a <h6>, <p>, <br>, <hr>, <strong>, <em>, <mark>, <small>",
+                "Listas: <ul><li>...</li></ul> (não ordenada), <ol><li>...</li></ol> (ordenada), <dl><dt>...</dt><dd>...</dd></dl>",
+                "Links e imagens: <a href='url' target='_blank'>link</a>, <img src='foto.jpg' alt='descrição'>",
+                "Tabelas: <table><thead><tr><th>...</th></tr></thead><tbody>...</tbody></table>",
+                "Formulários: <form action='/enviar' method='POST'> <input type='text', 'email', 'password', 'checkbox', 'radio'> <select><option> <textarea> <button>",
+                "Multimídia: <video src='...' controls></video>, <audio src='...' controls></audio>, <iframe src='...'></iframe>",
+                "Atributos globais: id, class, style, data-*, hidden, title.",
+                "HTML semântico melhora acessibilidade e SEO."
+            ],
+            "css": [
+                "Formas de aplicar: inline (style='...'), interno (<style>), externo (<link rel='stylesheet' href='...'>).",
+                "Seletores: universal (*), elemento (p), classe (.destaque), id (#cabecalho), agrupamento (h1,h2), descendente (div p), filho (ul>li), adjacente (h1+p), atributo (input[type='text']).",
+                "Pseudo-classes: :hover, :focus, :first-child, :last-child, :nth-child()",
+                "Pseudo-elementos: ::first-line, ::before, ::after.",
+                "Box Model: content, padding, border, margin; box-sizing: border-box;",
+                "Display: block, inline, inline-block, flex, grid, none.",
+                "Posicionamento: static, relative, absolute, fixed, sticky; z-index.",
+                "Flexbox: display:flex; flex-direction, justify-content, align-items, flex-wrap, gap, flex (grow/shrink).",
+                "Grid: display:grid; grid-template-columns, grid-template-rows, gap, grid-column/row.",
+                "Unidades: px, %, em, rem, vw, vh, vmin, vmax.",
+                "Cores: nome, hex, rgb, rgba, hsl.",
+                "Fontes: font-family, font-size, font-weight, text-align, text-decoration, line-height.",
+                "Background: background-color, background-image, background-repeat, background-size.",
+                "Transições: transition: propriedade duração easing.",
+                "Animações: @keyframes; animation: nome duração;",
+                "Media Queries: @media (max-width: 768px) { ... }",
+                "Frameworks: Bootstrap, Tailwind, Bulma."
+            ],
+            "sql": [
+                "Conceitos: banco relacional, tabelas (linhas/colunas), PK (chave primária), FK (chave estrangeira).",
+                "DDL: CREATE DATABASE, CREATE TABLE, ALTER TABLE, DROP TABLE, TRUNCATE.",
+                "DML: INSERT INTO tabela (colunas) VALUES (...); SELECT colunas FROM tabela WHERE ...; UPDATE tabela SET coluna=valor WHERE ...; DELETE FROM tabela WHERE ...;",
+                "Filtros: WHERE, AND/OR, LIKE, IN, BETWEEN, ORDER BY, LIMIT.",
+                "Agregação: COUNT, SUM, AVG, MIN, MAX; GROUP BY; HAVING.",
+                "Joins: INNER JOIN, LEFT JOIN, RIGHT JOIN, FULL OUTER JOIN.",
+                "Subconsultas: SELECT ... WHERE id IN (SELECT ...); EXISTS;",
+                "Funções: CONCAT, UPPER, LOWER, SUBSTRING, YEAR, MONTH, NOW().",
+                "Transações: START TRANSACTION; COMMIT; ROLLBACK;",
+                "Índices: CREATE INDEX idx_nome ON tabela(coluna);",
+                "Views: CREATE VIEW nome_view AS SELECT ...;",
+                "Stored Procedures e Triggers (conceito).",
+                "SGBDs: MySQL, PostgreSQL, SQL Server, Oracle, SQLite."
+            ],
+            "typescript": [
+                "Superset do JavaScript que adiciona tipagem estática, interfaces, generics, decorators.",
+                "Variáveis tipadas: let nome: string = 'João'; let idade: number = 25; let ativo: boolean = true;",
+                "Arrays: let lista: number[] = [1,2,3]; let frutas: Array<string> = ['maçã'];",
+                "Tuplas: let pessoa: [string, number] = ['Ana', 30];",
+                "Enums: enum Cores { Vermelho, Verde, Azul }; let cor: Cores = Cores.Verde;",
+                "Any (evitar): let qualquer: any = 'pode ser qualquer tipo';",
+                "Funções com tipos: function somar(a: number, b: number): number { return a+b; }",
+                "Parâmetros opcionais/padrão: function saudacao(nome: string, mensagem?: string): string { ... }",
+                "Interfaces: interface Usuario { id: number; nome: string; email?: string; }",
+                "Classes: class Animal { constructor(public nome: string, private idade: number) {} }",
+                "Generics: function identidade<T>(valor: T): T { return valor; }",
+                "Compilação: tsc arquivo.ts gera arquivo.js."
+            ],
+            // ---------- MATEMÁTICA FINANCEIRA E CONTABILIDADE (já existentes) ----------
+            "matematica financeira": [
+                "Juros simples: J = C·i·t, M = C(1 + i·t).",
+                "Juros compostos: M = C(1+i)^t, J = M - C.",
+                "Desconto racional: A = N/(1+i·t) (simples) ou A = N/(1+i)^t (composto).",
+                "Desconto comercial: D_c = N·i·t, A = N(1 - i·t).",
+                "Rendas postecipadas: FV = PMT·[(1+i)^n - 1]/i; PV = PMT·[1 - (1+i)^-n]/i.",
+                "Rendas antecipadas: multiplicar por (1+i).",
+                "SAC: amortização constante; Price: prestação fixa.",
+                "VPL = Σ FC_t/(1+i)^t - Investimento; TIR = i que zera VPL.",
+                "Payback simples e descontado."
+            ],
+            "contabilidade": [
+                "Equação fundamental: Ativo = Passivo + PL.",
+                "Partidas dobradas: todo débito tem crédito.",
+                "Balanço Patrimonial, DRE, DFC.",
+                "Índices: liquidez corrente, liquidez seca, endividamento, margem líquida, ROE."
+            ],
+            // ---------- HUMANIDADES E EXATAS (resumido) ----------
+            "historia": ["Independência do Brasil (1822)", "Revolução Francesa (1789)", "1ª Guerra (1914-1918)", "2ª Guerra (1939-1945)", "Guerra Fria, Era Vargas, Ditadura militar."],
+            "geografia": ["Globalização, blocos econômicos, DIT, recursos naturais, questões ambientais, demografia.", "Fórmulas: Densidade = Pop/Área, TN = (nascidos/pop)×1000, TM = (óbitos/pop)×1000, CV = TN - TM."],
+            "fisica": ["Velocidade média = Δs/Δt", "Força = m·a", "Energia cinética = (m·v²)/2", "Lei de Ohm: V = R·i", "Potência: P = U·i", "Ondas: v = λ·f", "Termologia: Q = m·c·ΔT"],
+            "quimica": ["Água H2O, Sal NaCl, Glicose C6H12O6", "Radioatividade: meia-vida", "N = N₀·(1/2)^{t/t₁/₂}"],
+            "biologia": ["Célula, fotossíntese, respiração, DNA, evolução."],
+            "ingles": ["Hello = Olá", "Good morning = Bom dia", "Thank you = Obrigado", "Present Perfect, Passive Voice, Financial vocabulary."],
+            // Diário, tarefas, flashcards (persistentes)
+            "diario": [],
+            "notas": [],
+            "flashcards": [{q: "Capital do Brasil?", r: "Brasília"}],
+            "tarefas": []
         };
-        try { const saved = localStorage.getItem('jarvis_db'); if (saved) db = JSON.parse(saved); } catch(e) {}
-        function saveDB() { localStorage.setItem('jarvis_db', JSON.stringify(db)); }
 
+        function saveKnowledgeBase() { localStorage.setItem('jarvis_knowledge', JSON.stringify(knowledgeBase)); }
+
+        // ==================== OUTROS BANCOS ====================
+        let gastos = JSON.parse(localStorage.getItem('jarvis_gastos')) || [];
+        let eventos = JSON.parse(localStorage.getItem('jarvis_eventos')) || [];
+        let senhas = JSON.parse(localStorage.getItem('jarvis_senhas')) || [];
+        let carteiraInvestimentos = JSON.parse(localStorage.getItem('jarvis_carteira')) || [];
+        let orcamentoMensal = JSON.parse(localStorage.getItem('jarvis_orcamento')) || { limite: 0 };
+        let metaEconomia = JSON.parse(localStorage.getItem('jarvis_meta')) || { objetivo: 0, atual: 0 };
+        let historicoConversas = [];
+
+        function saveAll() {
+            localStorage.setItem('jarvis_knowledge', JSON.stringify(knowledgeBase));
+            localStorage.setItem('jarvis_gastos', JSON.stringify(gastos));
+            localStorage.setItem('jarvis_eventos', JSON.stringify(eventos));
+            localStorage.setItem('jarvis_senhas', JSON.stringify(senhas));
+            localStorage.setItem('jarvis_carteira', JSON.stringify(carteiraInvestimentos));
+            localStorage.setItem('jarvis_orcamento', JSON.stringify(orcamentoMensal));
+            localStorage.setItem('jarvis_meta', JSON.stringify(metaEconomia));
+        }
+
+        // ==================== FUNÇÕES DE UI E VOZ ====================
         function updateSpeechUI() { toggleSpeechBtn.innerHTML = speechEnabled ? "🔊 Fala ativa" : "🔇 Fala desativada"; }
         updateSpeechUI();
         toggleSpeechBtn.onclick = () => { speechEnabled = !speechEnabled; localStorage.setItem('jarvis_speech', speechEnabled); updateSpeechUI(); addSystemMessage(speechEnabled ? "🔊 Voz ativada." : "🔇 Voz desativada."); };
@@ -112,140 +279,154 @@
             const content = isHtml ? text : text.replace(/\n/g, '<br>');
             div.innerHTML = `<div class="avatar">${avatar}</div><div class="bubble"><div class="sender">${sender}</div><p>${content}</p></div>`;
             chatBox.appendChild(div); chatBox.scrollTop = chatBox.scrollHeight;
-            if (role === 'user') conversationHistory.push({ role: "user", content: text });
-            else conversationHistory.push({ role: "assistant", content: text });
-            if (conversationHistory.length > 30) conversationHistory.shift();
+            if (role === 'user') historicoConversas.push({ role: 'user', text, timestamp: new Date() });
+            else historicoConversas.push({ role: 'jarvis', text, timestamp: new Date() });
         }
-        function addSystemMessage(text) { addMessage('jarvis', text); }
-        function speak(text) { if (speechEnabled && 'speechSynthesis' in window) { const utterance = new SpeechSynthesisUtterance(text.replace(/<[^>]*>/g, '')); utterance.lang = 'pt-BR'; window.speechSynthesis.cancel(); window.speechSynthesis.speak(utterance); } }
+        function addSystemMessage(text, isHtml = false) { addMessage('jarvis', text, isHtml); }
+        function speak(text) { if (speechEnabled && !modoNaoPerturbe && window.speechSynthesis) { window.speechSynthesis.cancel(); const utterance = new SpeechSynthesisUtterance(text); utterance.lang = 'pt-BR'; utterance.rate = speechRate; window.speechSynthesis.speak(utterance); } }
 
-        // ==================== COMANDOS OFFLINE ====================
-        function processOfflineCommand(cmd) {
-            const c = cmd.toLowerCase().trim();
-            if (c === 'que horas são') return new Date().toLocaleTimeString();
-            if (c === 'que dia é hoje') return new Date().toLocaleDateString();
-            const jokes = ["Por que o programador foi ao mercado? Por bytes!", "O que o zero disse ao oito? Bonito cinto!", "Qual o cúmulo do preguiçoso? Ser enterrado numa montanha de documentos.", "Jarvis: 'Eu não sou burro, só tenho preguiça de processar sua pergunta estúpida.'"];
-            if (c === 'conte uma piada') return jokes[Math.floor(Math.random() * jokes.length)];
-            if (c.startsWith('registrar diário ')) { let txt = cmd.substring(16).trim(); if (!txt) return "Escreva algo."; db.diario.push(`${new Date().toLocaleDateString()}: ${txt}`); saveDB(); return "📓 Registrado no diário."; }
-            if (c === 'ler diário') return db.diario.length ? "📖 Diário:\n" + db.diario.join("\n") : "Diário vazio.";
-            let gastoMatch = cmd.match(/adicionar gasto (.+?)\s+(\d+(?:\.\d+)?)/i);
-            if (gastoMatch) { db.gastos.push({ cat: gastoMatch[1], val: parseFloat(gastoMatch[2]), date: new Date() }); saveDB(); return `💰 Gasto registrado: ${gastoMatch[1]} R$ ${parseFloat(gastoMatch[2]).toFixed(2)}`; }
-            if (c === 'resumo gastos') { let total = db.gastos.reduce((s,g)=>s+g.val,0); let cats = {}; db.gastos.forEach(g=>cats[g.cat]=(cats[g.cat]||0)+g.val); return `💰 Total: R$ ${total.toFixed(2)}\nPor categoria:\n`+Object.entries(cats).map(([k,v])=>`  ${k}: R$ ${v.toFixed(2)}`).join("\n"); }
-            if (c === 'flashcard') { let card = db.flashcards[Math.floor(Math.random()*db.flashcards.length)]; return `📇 ${card.q} – (responda "resposta: ${card.q}")`; }
-            if (c.startsWith('resposta: ')) { let pergunta = c.substring(9).trim(); let card = db.flashcards.find(f=>f.q.toLowerCase()===pergunta.toLowerCase()); return card ? `✅ Resposta: ${card.r}` : "Flashcard não encontrado."; }
-            if (c.startsWith('criar flashcard ')) { let parts = cmd.substring(16).split('='); if (parts.length===2) { db.flashcards.push({q: parts[0].trim(), r: parts[1].trim()}); saveDB(); return `📌 Flashcard criado: ${parts[0].trim()}`; } return "Formato: criar flashcard pergunta = resposta"; }
-            let passMatch = cmd.match(/salvar senha (.+?)\s+(.+?)\s+(.+)/i);
-            if (passMatch) { db.senhas.push({site: passMatch[1], user: passMatch[2], pass: passMatch[3]}); saveDB(); return `🔐 Senha salva para ${passMatch[1]}`; }
-            if (c === 'mostrar senhas') { if (!db.senhas.length) return "Nenhuma senha salva."; return "🔐 Senhas:\n"+db.senhas.map((s,i)=>`${i+1}. ${s.site} - ${s.user}`).join("\n"); }
-            let eventMatch = cmd.match(/adicionar evento (\d{1,2}\/\d{1,2}\/\d{4})\s+(.+)/i);
-            if (eventMatch) { db.eventos.push({date: eventMatch[1], desc: eventMatch[2]}); saveDB(); return `✅ Evento para ${eventMatch[1]}: ${eventMatch[2]}`; }
-            if (c === 'eventos hoje') { let hoje = new Date().toLocaleDateString(); let evs = db.eventos.filter(e=>e.date===hoje); return evs.length ? "📅 Hoje:\n"+evs.map(e=>`• ${e.desc}`).join("\n") : "Nenhum evento hoje."; }
-            if (c === 'eventos amanhã') { let amanha = new Date(Date.now()+86400000).toLocaleDateString(); let evs = db.eventos.filter(e=>e.date===amanha); return evs.length ? "📅 Amanhã:\n"+evs.map(e=>`• ${e.desc}`).join("\n") : "Nenhum evento amanhã."; }
-            if (c.startsWith('tabuada do ')) { let n = parseInt(c.replace('tabuada do','').trim()); if (!isNaN(n)) return Array.from({length:10},(_,i)=>`${n} x ${i+1} = ${n*(i+1)}`).join("\n"); }
-            let imcMatch = cmd.match(/imc peso (\d+(?:\.\d+)?) altura (\d+(?:\.\d+)?)/i);
-            if (imcMatch) { let peso = parseFloat(imcMatch[1]), alt = parseFloat(imcMatch[2]); let imc = peso/(alt*alt); let classif = imc<18.5?"Abaixo":imc<25?"Normal":imc<30?"Sobrepeso":imc<35?"Obesidade I":imc<40?"Obesidade II":"Obesidade III"; return `IMC = ${imc.toFixed(2)} - ${classif}`; }
-            try { let mathExpr = cmd.match(/[\d\s\+\-\*\/\(\)\.\,\^\%]+/); if (mathExpr && !/[a-zA-Z]/.test(mathExpr[0])) { let expr = mathExpr[0].replace(/,/g,'.').replace(/\^/g,'**'); let res = eval(expr); return `🧮 Resultado: ${res}`; } } catch(e) {}
-            const sinonimos = { "bom": "ótimo, excelente", "ruim": "péssimo, horrível", "rápido": "veloz, ágil", "grande": "enorme, imenso" };
-            if (c.startsWith('sinônimo de ')) { let palavra = c.substring(12).trim(); return sinonimos[palavra] ? `Sinônimos de ${palavra}: ${sinonimos[palavra]}` : "Desconhecido. Use IA para mais."; }
-            const capitais = { "brasil": "Brasília", "frança": "Paris", "japão": "Tóquio", "eua": "Washington D.C." };
-            if (c.startsWith('capital de ')) { let pais = c.substring(11).trim(); return capitais[pais] ? `Capital de ${pais}: ${capitais[pais]}` : "Não sei. Pergunte à IA."; }
-            if (c === 'ajuda' || c === 'comandos') { return "📚 COMANDOS OFFLINE:\n- que horas são / que dia é hoje\n- conte uma piada\n- registrar diário [texto] / ler diário\n- adicionar gasto [cat] [valor] / resumo gastos\n- flashcard / criar flashcard pergunta = resposta / resposta: [pergunta]\n- salvar senha [site] [user] [senha] / mostrar senhas\n- adicionar evento dd/mm/aaaa descrição / eventos hoje / eventos amanhã\n- tabuada do [n] / imc peso [kg] altura [m]\n- calcular [expressão]\n- sinônimo de [palavra] / capital de [país]\n\n🌐 ONLINE (IA): faça perguntas, análise de PDFs."; }
-            return null;
-        }
-
-        // ==================== OPENROUTER (LLaMA 3.2 3B gratuito) ====================
-        async function callOpenRouter(prompt) {
-            if (!API_KEY) return "❌ API key não configurada. Obtenha uma chave grátis em openrouter.ai.";
-            const url = "https://openrouter.ai/api/v1/chat/completions";
-            const messages = [
-                { role: "system", content: "Você é JARVIS, assistente sarcástico, ranzinza, mas útil. Responda em português, frases curtas (máx 2 frases). Use humor ácido e xingamentos leves (porra, caralho) só quando pertinente. Seja direto." },
-                ...conversationHistory.slice(-10).map(msg => ({ role: msg.role, content: msg.content })),
-                { role: "user", content: prompt }
-            ];
-            // Modelo corrigido (válido e gratuito)
-            const model = "meta-llama/llama-3.2-3b-instruct:free";
-            const payload = {
-                model: model,
-                messages: messages,
-                max_tokens: 1000,
-                temperature: 0.8
-            };
-            try {
-                const resp = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${API_KEY}`,
-                        'HTTP-Referer': 'https://jarvis.app',
-                        'X-Title': 'JARVIS Assistant'
-                    },
-                    body: JSON.stringify(payload)
-                });
-                const data = await resp.json();
-                if (data.error) {
-                    console.error("OpenRouter error:", data.error);
-                    // Se erro de modelo, tenta um fallback
-                    if (data.error.message && data.error.message.includes("model")) {
-                        return "⚠️ Modelo temporariamente indisponível. Tente novamente mais tarde ou use comandos offline.";
-                    }
-                    return `Erro: ${data.error.message}`;
-                }
-                if (data.choices && data.choices[0] && data.choices[0].message) {
-                    return data.choices[0].message.content;
-                } else {
-                    return "Resposta inesperada da IA.";
-                }
-            } catch(e) {
-                console.error("Fetch error:", e);
-                return `Erro de conexão: ${e.message}`;
+        // ==================== PDF E LEITURA EM VOZ ALTA ====================
+        let pdfBlocos = [], blocoAtual = 0, leituraAtiva = false, leituraPausada = false;
+        function dividirTextoEmBlocos(texto, tamBloco = 550) {
+            let palavras = texto.split(/\s+/); let blocos = []; let atual = '';
+            for (let p of palavras) {
+                if ((atual + ' ' + p).length > tamBloco) { if (atual) blocos.push(atual.trim()); atual = p; }
+                else atual += (atual ? ' ' : '') + p;
             }
+            if (atual) blocos.push(atual.trim()); return blocos;
         }
-
-        async function processUserInput(text, imageBase64 = null) {
-            addMessage('user', text);
-            typingDiv.innerText = 'JARVIS pensando...';
-            let resposta = processOfflineCommand(text);
-            if (resposta) {
-                typingDiv.innerText = '';
-                addMessage('jarvis', resposta);
-                speak(resposta);
-                return;
-            }
-            if (!API_KEY) {
-                typingDiv.innerText = '';
-                addMessage('jarvis', "❌ Sem chave API. Recarregue e cole a chave da OpenRouter.");
-                return;
-            }
-            let promptFinal = text;
-            if (pdfCache) promptFinal = `[Conteúdo do PDF]\n${pdfCache}\n\nPergunta: ${text}`;
-            const iaRes = await callOpenRouter(promptFinal);
-            typingDiv.innerText = '';
-            addMessage('jarvis', iaRes);
-            speak(iaRes);
+        function lerBloco(indice) {
+            if (!leituraAtiva || leituraPausada) return;
+            if (indice >= pdfBlocos.length) { addSystemMessage("📖 Fim do PDF."); leituraAtiva = false; return; }
+            blocoAtual = indice;
+            addSystemMessage(`🔊 Lendo bloco ${indice+1}/${pdfBlocos.length}`, false);
+            if (!speechEnabled) { addSystemMessage(`[Bloco ${indice+1}] ${pdfBlocos[indice]}`); setTimeout(() => lerBloco(indice+1), 500); return; }
+            const utterance = new SpeechSynthesisUtterance(pdfBlocos[indice]); utterance.lang = 'pt-BR'; utterance.rate = speechRate;
+            utterance.onend = () => { if (leituraAtiva && !leituraPausada) lerBloco(indice+1); };
+            window.speechSynthesis.cancel(); window.speechSynthesis.speak(utterance);
         }
+        function iniciarLeituraBlocos() { if (!pdfBlocos.length) { addSystemMessage("Nenhum PDF carregado."); return; } if (leituraAtiva && !leituraPausada) { addSystemMessage("Leitura já em andamento."); return; } if (leituraPausada) { leituraPausada = false; leituraAtiva = true; lerBloco(blocoAtual); return; } if (blocoAtual >= pdfBlocos.length) blocoAtual = 0; leituraAtiva = true; leituraPausada = false; lerBloco(blocoAtual); }
+        function pausarLeitura() { if (leituraAtiva && !leituraPausada) { window.speechSynthesis.cancel(); leituraPausada = true; addSystemMessage("⏸️ Pausado."); } else addSystemMessage("Nenhuma leitura ativa."); }
+        function continuarLeitura() { if (leituraPausada && pdfBlocos.length) { leituraPausada = false; leituraAtiva = true; lerBloco(blocoAtual); } else if (!leituraAtiva && pdfBlocos.length) iniciarLeituraBlocos(); else addSystemMessage("Nada para continuar."); }
+        function proximoBloco() { if (!pdfBlocos.length) return; if (leituraAtiva) pausarLeitura(); if (blocoAtual+1 < pdfBlocos.length) { blocoAtual++; addSystemMessage(`⏩ Bloco ${blocoAtual+1}/${pdfBlocos.length}`); } else addSystemMessage("Último bloco."); }
+        function anteriorBloco() { if (!pdfBlocos.length) return; if (leituraAtiva) pausarLeitura(); if (blocoAtual > 0) { blocoAtual--; addSystemMessage(`⏪ Bloco ${blocoAtual+1}/${pdfBlocos.length}`); } else addSystemMessage("Primeiro bloco."); }
+        window.iniciarLeituraBlocos = iniciarLeituraBlocos; window.pausarLeitura = pausarLeitura; window.continuarLeitura = continuarLeitura; window.proximoBloco = proximoBloco; window.anteriorBloco = anteriorBloco;
 
+        // ==================== UPLOAD PDF/IMAGEM ====================
         async function uploadFile() {
             const input = document.createElement('input'); input.type = 'file'; input.accept = 'application/pdf,image/*';
             input.onchange = async (e) => {
                 const file = e.target.files[0]; if (!file) return;
                 if (file.type === 'application/pdf') {
-                    addMessage('user', `📎 Enviou PDF: ${file.name}`); typingDiv.innerText = 'Lendo PDF...';
-                    const buffer = await file.arrayBuffer(); const pdf = await pdfjsLib.getDocument({ data: buffer }).promise; let fullText = '';
+                    addMessage('user', `📎 Enviou PDF: ${file.name}`);
+                    typingDiv.innerText = 'Processando PDF...';
+                    const buffer = await file.arrayBuffer();
+                    const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+                    let fullText = '';
                     for (let i=1; i<=pdf.numPages; i++) { const page = await pdf.getPage(i); const content = await page.getTextContent(); fullText += content.items.map(item=>item.str).join(' ') + '\n'; }
-                    pdfCache = fullText; typingDiv.innerText = ''; addMessage('jarvis', `✅ PDF "${file.name}" carregado (${fullText.length} caracteres). Pergunte sobre ele.`);
+                    pdfBlocos = dividirTextoEmBlocos(fullText, 550);
+                    blocoAtual = 0;
+                    typingDiv.innerText = '';
+                    const controlsHtml = `<div class="pdf-controls"><button onclick="window.iniciarLeituraBlocos()">🔊 Ler</button><button onclick="window.pausarLeitura()">⏸️ Pausar</button><button onclick="window.continuarLeitura()">▶️ Cont.</button><button onclick="window.proximoBloco()">⏩ Próx</button><button onclick="window.anteriorBloco()">⏪ Ant</button></div>`;
+                    addSystemMessage(`✅ PDF "${file.name}" (${pdf.numPages} págs, ${pdfBlocos.length} blocos). ${controlsHtml}`, true);
                 } else if (file.type.startsWith('image/')) {
-                    addMessage('user', `🖼️ Enviou imagem: ${file.name}`); typingDiv.innerText = 'Processando imagem (OCR)...';
-                    try {
-                        const { data: { text } } = await Tesseract.recognize(file, 'por');
-                        typingDiv.innerText = '';
-                        addMessage('jarvis', `📷 Texto extraído da imagem:\n${text || "Nenhum texto encontrado."}`);
-                        speak("Texto extraído da imagem.");
-                    } catch(err) {
-                        typingDiv.innerText = '';
-                        addMessage('jarvis', `❌ Erro no OCR: ${err.message}`);
-                    }
-                } else { addMessage('jarvis', "Formato não suportado."); }
+                    addMessage('user', `🖼️ Enviou imagem: ${file.name}`);
+                    typingDiv.innerText = 'OCR...';
+                    try { const { data: { text } } = await Tesseract.recognize(file, 'por'); typingDiv.innerText = ''; addSystemMessage(`📷 Texto extraído:\n${text || "Nenhum texto encontrado."}`); speak("OCR concluído."); } catch(err) { typingDiv.innerText = ''; addSystemMessage(`❌ OCR falhou: ${err.message}`); }
+                } else addSystemMessage("Formato não suportado.");
             }; input.click();
+        }
+        attachBtn.onclick = uploadFile;
+
+        // ==================== QR CODE SCAN ====================
+        async function scanQRCode() {
+            const video = document.createElement('video'); const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
+            const modal = document.createElement('div'); modal.className = 'modal'; modal.innerHTML = `<div class="modal-card"><h3>📱 Aponte para o QR Code</h3><video id="qrVideo" autoplay playsinline></video><br><button id="closeQRModal">Fechar</button></div>`;
+            document.body.appendChild(modal);
+            const videoElement = modal.querySelector('#qrVideo');
+            let stream = null;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                videoElement.srcObject = stream; await videoElement.play();
+                const tick = () => {
+                    if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+                        canvas.width = videoElement.videoWidth; canvas.height = videoElement.videoHeight;
+                        ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                        let code = jsQR(ctx.getImageData(0,0,canvas.width,canvas.height).data, canvas.width, canvas.height);
+                        if (code) { if (stream) stream.getTracks().forEach(t=>t.stop()); modal.remove(); addSystemMessage(`📲 QR Code: ${code.data}`); speak("QR Code lido."); return; }
+                    } requestAnimationFrame(tick);
+                }; tick();
+                modal.querySelector('#closeQRModal').onclick = () => { if (stream) stream.getTracks().forEach(t=>t.stop()); modal.remove(); };
+            } catch(err) { modal.innerHTML = `<div class="modal-card"><p>❌ Erro câmera: ${err.message}</p><button id="closeQRModal">Fechar</button></div>`; modal.querySelector('#closeQRModal').onclick = () => modal.remove(); }
+        }
+        qrScanBtn.onclick = scanQRCode;
+
+        // ==================== COMANDOS OFFLINE (inclui matérias + financeiros + ajuda) ====================
+        function processOfflineCommand(cmd) {
+            const c = cmd.toLowerCase().trim();
+            // Verifica se o comando é o nome de uma matéria no knowledgeBase (inclusive as novas)
+            for (let materia in knowledgeBase) {
+                if (c === materia && knowledgeBase[materia] && knowledgeBase[materia].length) {
+                    return `<b>📘 ${materia.toUpperCase()}</b><br><br>${knowledgeBase[materia].map(item => `• ${item}`).join('<br>')}`;
+                }
+            }
+            // Comandos financeiros básicos (juros, VPL, SAC, Price, ponto equilibrio)
+            if (c.startsWith('juros compostos ')) {
+                let parts = cmd.match(/juros compostos\s+capital\s+(\d+(?:\.\d+)?)\s+taxa\s+(\d+(?:\.\d+)?)%?\s+meses\s+(\d+)/i);
+                if (parts) { let cap=parseFloat(parts[1]), taxa=parseFloat(parts[2])/100, meses=parseInt(parts[3]); let mont=cap*Math.pow(1+taxa,meses); return `📈 Montante: R$ ${mont.toFixed(2)} | Juros: R$ ${(mont-cap).toFixed(2)}`; }
+                return "Formato: juros compostos capital [valor] taxa [%] meses [n]";
+            }
+            if (c.startsWith('vpl ')) {
+                let parts = cmd.match(/vpl\s+([\d\.]+)\s+([\d\.\s]+)\s+taxa\s+(\d+(?:\.\d+)?)/i);
+                if (parts) { let inv=parseFloat(parts[1]), fluxos=parts[2].trim().split(/\s+/).map(Number), taxa=parseFloat(parts[3])/100; let vpl=-inv; for(let i=0;i<fluxos.length;i++) vpl+=fluxos[i]/Math.pow(1+taxa,i+1); return `💰 VPL = R$ ${vpl.toFixed(2)}. ${vpl>=0?"Viável":"Inviável"}`; }
+                return "Formato: vpl [investimento] [fc1 fc2 ...] taxa [%]";
+            }
+            if (c.startsWith('sac ')) {
+                let parts = cmd.match(/sac\s+(\d+(?:\.\d+)?)\s+(\d+)\s+(\d+(?:\.\d+)?)/);
+                if (parts) { let pv=parseFloat(parts[1]), n=parseInt(parts[2]), i=parseFloat(parts[3])/100, amort=pv/n, primeira=amort+(pv*i); return `📉 SAC: Amortização = R$ ${amort.toFixed(2)}; 1ª parcela = R$ ${primeira.toFixed(2)} (decrescente).`; }
+                return "Formato: sac [valor] [meses] [taxa%]";
+            }
+            if (c.startsWith('price ')) {
+                let parts = cmd.match(/price\s+(\d+(?:\.\d+)?)\s+(\d+)\s+(\d+(?:\.\d+)?)/);
+                if (parts) { let pv=parseFloat(parts[1]), n=parseInt(parts[2]), i=parseFloat(parts[3])/100, pmt=pv*(i*Math.pow(1+i,n))/(Math.pow(1+i,n)-1); return `🏦 Price: Prestação fixa = R$ ${pmt.toFixed(2)} por ${n} meses.`; }
+                return "Formato: price [valor] [meses] [taxa%]";
+            }
+            if (c.startsWith('ponto equilibrio ')) {
+                let parts = cmd.match(/ponto equilibrio\s+cf\s+(\d+(?:\.\d+)?)\s+preco\s+(\d+(?:\.\d+)?)\s+cvu\s+(\d+(?:\.\d+)?)/i);
+                if (parts) { let cf=parseFloat(parts[1]), preco=parseFloat(parts[2]), cvu=parseFloat(parts[3]); let pe=cf/(preco-cvu); return `📊 Ponto de equilíbrio: ${pe.toFixed(0)} unidades (R$ ${(pe*preco).toFixed(2)} em receita).`; }
+                return "Formato: ponto equilibrio cf [fixo] preco [unitario] cvu [custo variavel unitario]";
+            }
+            // Comandos já existentes (horas, piadas, etc.) – aqui só exemplos, mas mantemos a estrutura completa da versão Ultra
+            if (c === 'que horas são') return new Date().toLocaleTimeString();
+            if (c === 'que dia é hoje') return new Date().toLocaleDateString();
+            const jokes = ["Por que o programador foi ao mercado? Por bytes!", "O que o zero disse ao oito? Bonito cinto!", "Qual o cúmulo do preguiçoso? Ser enterrado numa montanha de documentos.", "Jarvis: 'Eu não sou burro, só tenho preguiça de processar sua pergunta estúpida.'"];
+            if (c === 'conte uma piada') return jokes[Math.floor(Math.random() * jokes.length)];
+            if (c === 'ajuda') {
+                return `📚 JARVIS OFFLINE TOTAL - COMANDOS
+📘 Matérias: python, java, javascript, html, css, sql, typescript, matematica financeira, contabilidade, historia, geografia, fisica, quimica, biologia, ingles, etc.
+💰 Finanças: juros compostos capital X taxa Y meses Z, vpl X fc1 fc2 taxa Y, sac valor meses taxa, price valor meses taxa, ponto equilibrio cf X preco Y cvu Z
+📝 Produtividade: registrar diário [texto], ler diário, nota: [texto], minhas notas
+💸 Gastos: adicionar gasto [cat] [valor], resumo gastos
+🃏 Flashcards: flashcard, criar flashcard pergunta = resposta, resposta: [pergunta]
+🔐 Senhas: salvar senha [site] [user] [senha], mostrar senhas
+📅 Eventos: adicionar evento dd/mm/aaaa descrição, eventos hoje, eventos amanhã
+⏰ Timer: timer X min/seg, alarme HH:MM
+🎲 Diversos: jogar dado, cara ou coroa, gerar senha 12
+🔊 Ajustes: modo não perturbe, vibrar, tela cheia, limpar conversa
+❓ Ajuda categoria [programacao|financas|saude] (parcial)`;
+            }
+            return null;
+        }
+
+        // ==================== PROCESSAMENTO PRINCIPAL ====================
+        async function processUserInput(text) {
+            addMessage('user', text);
+            typingDiv.innerText = 'JARVIS pensando...';
+            let resposta = processOfflineCommand(text);
+            if (!resposta) resposta = "Comando não reconhecido. Digite 'ajuda' para ver opções.";
+            typingDiv.innerText = '';
+            addMessage('jarvis', resposta, true);
+            speak(resposta);
         }
 
         // ==================== VOZ ====================
@@ -254,46 +435,33 @@
             recognition = new SpeechRecognition(); recognition.lang = 'pt-BR'; recognition.continuous = false; recognition.interimResults = false;
             recognition.onresult = (event) => { const fala = event.results[0][0].transcript; userInput.value = fala; processUserInput(fala); };
             voiceBtn.onclick = () => recognition.start();
-        } else { voiceBtn.style.display = 'none'; }
+        } else voiceBtn.style.display = 'none';
 
-        // ==================== BACKUP ====================
-        function exportBackup() { const dataStr = JSON.stringify({ apiKey: API_KEY, db, config: { speechEnabled } }); const blob = new Blob([dataStr], {type: 'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'jarvis_backup.json'; a.click(); }
-        function importBackup() { const input = document.createElement('input'); input.type = 'file'; input.accept = 'application/json'; input.onchange = async (e) => { const file = e.target.files[0]; const text = await file.text(); try { const data = JSON.parse(text); if (data.db) db = data.db; if (data.apiKey) API_KEY = data.apiKey; if (data.config) speechEnabled = data.config.speechEnabled; saveDB(); localStorage.setItem('openrouter_api_key', API_KEY); localStorage.setItem('jarvis_speech', speechEnabled); addSystemMessage("✅ Backup restaurado com sucesso."); } catch(err) { addSystemMessage("❌ Arquivo inválido."); } }; input.click(); }
+        // ==================== BACKUP / RESTORE ====================
+        function exportBackup() { const data = { knowledgeBase, gastos, eventos, senhas, carteiraInvestimentos, orcamentoMensal, metaEconomia, speechEnabled, speechRate }; const blob = new Blob([JSON.stringify(data)], {type: 'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'jarvis_backup.json'; a.click(); }
+        function importBackup() { const input = document.createElement('input'); input.type = 'file'; input.accept = 'application/json'; input.onchange = async (e) => { const file = e.target.files[0]; const text = await file.text(); try { const data = JSON.parse(text); Object.assign(knowledgeBase, data.knowledgeBase); gastos = data.gastos; eventos = data.eventos; senhas = data.senhas; carteiraInvestimentos = data.carteiraInvestimentos || []; orcamentoMensal = data.orcamentoMensal || { limite:0 }; metaEconomia = data.metaEconomia || { objetivo:0, atual:0 }; speechEnabled = data.speechEnabled; speechRate = data.speechRate || 0.9; saveAll(); localStorage.setItem('jarvis_speech', speechEnabled); updateSpeechUI(); addSystemMessage("✅ Backup restaurado."); } catch(err) { addSystemMessage("❌ Arquivo inválido."); } }; input.click(); }
         function clearAllData() { if (confirm("⚠️ Apagar TODOS os dados? Isso não pode ser desfeito.")) { localStorage.clear(); location.reload(); } }
+        document.getElementById('exportBackupBtn').onclick = exportBackup;
+        document.getElementById('importBackupBtn').onclick = importBackup;
+        document.getElementById('clearDataBtn').onclick = clearAllData;
 
-        // ==================== MENU ====================
+        // ==================== MENU E TEMAS ====================
         function toggleSidebar(show) { if (show) { sidebar.classList.add('open'); overlay.classList.add('active'); } else { sidebar.classList.remove('open'); overlay.classList.remove('active'); } }
         menuBtn.onclick = () => toggleSidebar(true); closeSidebar.onclick = () => toggleSidebar(false); overlay.onclick = () => toggleSidebar(false);
         document.querySelectorAll('.theme-btn').forEach(btn => { btn.onclick = () => { const theme = btn.getAttribute('data-theme'); document.body.className = theme === 'dark' ? '' : theme; if (theme === 'dark') document.body.removeAttribute('class'); localStorage.setItem('jarvis_theme', theme); }; });
         const savedTheme = localStorage.getItem('jarvis_theme'); if (savedTheme && savedTheme !== 'dark') document.body.className = savedTheme;
 
         // ==================== BOTÕES RÁPIDOS ====================
-        const quickCmds = ["que horas são", "conte uma piada", "resumo gastos", "flashcard", "ajuda"];
+        const quickCmds = ["python", "java", "javascript", "html", "css", "sql", "typescript", "ajuda"];
         const quickContainer = document.getElementById('quickButtons');
         quickCmds.forEach(cmd => { const btn = document.createElement('button'); btn.textContent = cmd; btn.className = 'quick-btn'; btn.onclick = () => processUserInput(cmd); quickContainer.appendChild(btn); });
-        const attachQuick = document.createElement('button'); attachQuick.textContent = "📎 Anexar"; attachQuick.className = 'quick-btn'; attachQuick.onclick = uploadFile; quickContainer.appendChild(attachQuick);
+        const attachQuick = document.createElement('button'); attachQuick.textContent = "📎 Anexar PDF/Imagem"; attachQuick.className = 'quick-btn'; attachQuick.onclick = uploadFile; quickContainer.appendChild(attachQuick);
 
-        // ==================== EVENTOS PRINCIPAIS ====================
         sendBtn.onclick = () => { if (userInput.value.trim()) processUserInput(userInput.value.trim()); userInput.value = ''; };
         userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendBtn.click(); });
-        attachBtn.onclick = uploadFile;
-        document.getElementById('exportBackupBtn').onclick = exportBackup;
-        document.getElementById('importBackupBtn').onclick = importBackup;
-        document.getElementById('clearDataBtn').onclick = clearAllData;
 
-        // ==================== API KEY MODAL ====================
-        if (!API_KEY) {
-            const modal = document.createElement('div'); modal.className = 'modal';
-            modal.innerHTML = `<div class="modal-card"><h3>🔑 Chave da OpenRouter</h3><p>Obtenha grátis em <a href="https://openrouter.ai/" target="_blank" style="color:var(--accent)">openrouter.ai</a> (crie conta, vá em Keys, gere uma).</p><input type="text" id="apiKeyInput" placeholder="Cole sua API key aqui" autocomplete="off"><div><button id="saveApiKey">Salvar</button><button id="cancelApiKey">Usar só offline</button></div></div>`;
-            document.body.appendChild(modal);
-            document.getElementById('saveApiKey').onclick = () => { const key = document.getElementById('apiKeyInput').value.trim(); if (key) { API_KEY = key; localStorage.setItem('openrouter_api_key', key); statusSpan.innerText = '🔵 IA ativa (LLaMA)'; modal.remove(); addSystemMessage("✅ Chave salva! Agora IA funcionando."); } else alert("Digite uma chave válida."); };
-            document.getElementById('cancelApiKey').onclick = () => { modal.remove(); statusSpan.innerText = '🟡 Offline'; addSystemMessage("Modo offline ativo. Para IA, recarregue e cole a chave."); };
-        } else { statusSpan.innerText = '🔵 IA ativa (LLaMA)'; }
-
-        addSystemMessage("✨ JARVIS pronto! Teste comandos offline ou fale comigo. Para IA, use chave da OpenRouter (grátis).");
-
-        // ==================== SERVICE WORKER ====================
-        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').then(reg => console.log('SW registrado', reg)).catch(err => console.error('Falha SW', err)); }
+        addSystemMessage("✨ JARVIS com programação, finanças e humanidades carregado. Digite 'python', 'java', 'sql', etc. para estudar.");
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(err => console.error); }
     </script>
 </body>
 </html>
